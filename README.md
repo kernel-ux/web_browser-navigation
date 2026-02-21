@@ -4,8 +4,6 @@
 
 GhostGuide is a Chrome extension that turns a high‑level goal into step‑by‑step guidance on any website. It scans the live DOM (no screenshots), ranks likely targets, asks an AI for the next action, then highlights the exact element so you can complete the step confidently.
 
-![GhostGuide Demo](assets/demo.gif)
-
 Demo video (full quality): `assets/demo.mp4`
 Full video link: `https://github.com/kernel-ux/web_browser-navigation/raw/main/assets/demo.mp4`
 
