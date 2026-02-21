@@ -1,0 +1,44 @@
+{
+    "manifest_version": 3,
+    "name": "GhostGuide",
+    "version": "1.0",
+    "description": "Step-by-step AI guide using DOM scanning (no screenshots).",
+    "permissions": [
+        "sidePanel",
+        "scripting",
+        "activeTab",
+        "storage",
+        "debugger"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "side_panel": {
+        "default_path": "panel.html"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "vendor/Readability.js",
+                "vendor/turndown.js",
+                "content.js"
+            ],
+            "all_frames": true
+        }
+    ],
+    "sandbox": {
+        "pages": [
+            "sandbox.html"
+        ]
+    },
+    "content_security_policy": {
+        "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+        "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self';"
+    }
+}

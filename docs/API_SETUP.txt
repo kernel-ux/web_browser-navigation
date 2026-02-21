@@ -1,0 +1,185 @@
+GhostGuide Extension - COMPLETE UPDATE
+======================================
+
+✅ NEW FEATURES ADDED:
+
+1. GROQ API PROVIDER (FAST & FREE)
+   - Ultra-fast inference 
+   - Free tier available
+   - Mixtral 8x7B model by default
+   - Get key: https://console.groq.com/keys
+
+2. FLEXIBLE PROMPT SYSTEM
+   - Works for ANY web task (not just APIs)
+   - No hardcoded button clicking
+   - Adapts to your goal automatically
+   - Won't repeat same actions
+
+3. IMPROVED REPETITION DETECTION
+   - Detects when stuck in loops
+   - Prevents repeating the same URL in recent history
+   - Limits repeated clicks on the same element when the page doesn't change
+   - Auto-stops with clear message
+
+4. TYPE ACTION
+   - AI can now suggest: type [index] "text"
+   - Works for form fields, search inputs, and text areas
+   - Highlights the field and fills the text
+
+5. SESSION HISTORY (SAVE & LOAD)
+   - Sessions are saved locally with timestamp and goal
+   - Load previous sessions from the History panel
+   - Delete sessions you no longer need
+
+---
+
+📝 AVAILABLE PROVIDERS:
+
+1. GEMINI (Google Free Tier)
+   - API: aistudio.google.com/app/apikey
+   - Model: gemini-1.5-flash-latest
+   - Cost: Free (generous limits)
+   - Speed: Medium
+   - Quality: Very Good
+
+2. GROQ (Fast & Free) ⚡
+   - API: console.groq.com/keys
+   - Model: mixtral-8x7b-32768
+   - Cost: Free
+   - Speed: VERY FAST
+   - Quality: Good
+
+3. OPENAI (GPT-4o Mini)
+   - API: platform.openai.com/api-keys
+   - Model: gpt-4o-mini
+   - Cost: Pay per use (~$0.15/1M tokens)
+   - Speed: Fast
+   - Quality: Excellent
+
+4. OPENROUTER (All Models)
+   - API: openrouter.ai/keys
+   - Model: Any available (chatgpt, claude, llama, etc)
+   - Cost: Varies by model
+   - Speed: Varies
+   - Quality: Excellent (depends on model)
+
+5. ANTHROPIC (Claude 3.5)
+   - API: console.anthropic.com
+   - Model: claude-3-5-sonnet-20241022
+   - Cost: Pay per use (~$3/1M input)
+   - Speed: Medium
+   - Quality: Excellent
+
+6. DEEPSEEK (V3/R1)
+   - API: platform.deepseek.com
+   - Model: deepseek-chat
+   - Cost: Pay per use (cheap)
+   - Speed: Medium
+   - Quality: Excellent reasoning
+
+---
+
+🚀 QUICK SETUP:
+
+FASTEST OPTION (Groq):
+1. Settings ⚙️
+2. Select "Groq (Fast & Free)"
+3. Get API key: console.groq.com/keys
+4. Paste key
+5. Leave Model blank for mixtral-8x7b-32768
+6. Test Connection
+7. Save & Close
+
+FREE OPTION (Gemini):
+1. Settings ⚙️
+2. Select "Google Gemini (Free)"
+3. Get API key: aistudio.google.com/app/apikey
+4. Paste key
+5. Leave Model blank
+6. Test Connection
+7. Save & Close
+
+---
+
+💡 PROMPT IMPROVEMENTS:
+
+The new prompt:
+✅ Works for ANY task (APIs, login, forms, navigation, etc)
+✅ Doesn't force specific patterns
+✅ Adapts based on what's on the page
+✅ Detects when stuck and stops
+✅ More natural AI reasoning
+
+Examples that now work:
+- "guide me to get gemini api" 
+- "help me sign in"
+- "find the download button"
+- "search for something"
+- "click the first result"
+- "fill this form and submit"
+
+All work without repetition or hardcoded paths!
+
+---
+
+🐛 REPETITION FIX:
+
+The system now:
+✅ Tracks all previous actions
+✅ Detects when suggesting same action
+✅ Auto-stops if stuck 3+ times
+✅ Shows clear error instead of loop
+✅ Lets you provide feedback to steer differently
+
+If AI gets stuck:
+- It will stop and show error
+- Your "Done" button won't freeze
+- You can click "Done" to retry
+- Or provide feedback for different approach
+
+---
+
+🧪 TEST EVERYTHING:
+
+1. Reload extension (chrome://extensions)
+
+2. Pick a provider:
+   - For speed: Groq
+   - For free: Gemini
+   - For quality: OpenRouter
+
+3. Setup API key
+
+4. Click "Test Connection"
+   - Should show "Success" in green
+   - F12 Console shows details
+
+5. Try any goal:
+   - "click login"
+   - "search for something"
+   - "find download button"
+   - "get gemini api key"
+
+---
+
+🔧 TECHNICAL CHANGES:
+
+background.js:
+- Added Groq to DEFAULT_MODELS
+- Added Groq to resolveOpenAiUrl()
+- Updated system message for flexibility
+- Better error handling
+
+panel.html:
+- Added Groq in provider dropdown
+- Updated descriptions
+
+panel.js:
+- Updated updateProviderFields for Groq
+- New flexible prompt system
+- Improved repetition detection
+- Better error handling in confirmStep()
+
+All providers now work reliably!
+
+

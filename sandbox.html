@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>
+        window.onerror = function (msg, url, line, col, error) {
+            console.error('[Sandbox HTML Error]', msg, url, line, error);
+            window.parent.postMessage({ type: 'SANDBOX_ERROR', error: msg }, '*');
+        };
+        console.log('[Sandbox] HTML loaded, starting script loads...');
+    </script>
+    <script src="vendor/tf.min.js" onload="console.log('[Sandbox] tf.min.js loaded')"
+        onerror="console.error('[Sandbox] Failed to load tf.min.js')"></script>
+    <script src="vendor/use.min.js" onload="console.log('[Sandbox] use.min.js loaded')"
+        onerror="console.error('[Sandbox] Failed to load use.min.js')"></script>
+    <script src="sandbox.js"></script>
+</head>
+
+<body>
+</body>
+
+</html>

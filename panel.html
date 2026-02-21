@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GhostGuide</title>
+    <link rel="stylesheet" href="panel.css">
+</head>
+
+<body>
+    <header>
+        <button id="sessions-btn" class="icon-btn">≡</button>
+        <h2><span class="logo-emoji">👻</span> GhostGuide</h2>
+        <div>
+            <button id="scan-btn" class="icon-btn" title="Scan Page">Scan</button>
+            <button id="clear-history-btn" class="icon-btn" title="Clear History">Clear</button>
+            <button id="new-chat-btn" class="icon-btn" title="New Chat">+</button>
+            <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
+        </div>
+    </header>
+
+    <div id="loading-overlay" class="hidden">
+        <div class="ghost-spinner">👻</div>
+        <div id="loading-text">Starting...</div>
+    </div>
+
+    <div id="sessions-panel">
+        <h3 class="session-title">History</h3>
+        <div id="session-list"></div>
+    </div>
+
+    <div id="settings-panel" class="hidden">
+        <h3>Settings</h3>
+
+        <label>AI Provider</label>
+        <select id="provider-select">
+            <option value="gemini">Google Gemini (Free)</option>
+            <option value="openai">OpenAI (GPT-4o)</option>
+            <option value="groq">Groq (Fast & Free)</option>
+            <option value="anthropic">Anthropic (Claude 3.5)</option>
+            <option value="deepseek">DeepSeek (V3/R1)</option>
+            <option value="openrouter">OpenRouter (All Models)</option>
+            <option value="custom">Custom / Local</option>
+        </select>
+
+        <label>
+            <input type="checkbox" id="banner-toggle" checked>
+            Show guidance banners (recommended)
+        </label>
+
+        <label>
+            <input type="checkbox" id="cdp-toggle" checked>
+            Enable CDP fallback (shows Chrome debugging banner)
+        </label>
+
+
+        <div id="base-url-group" class="settings-group-hidden">
+            <label>Base URL</label>
+            <input type="text" id="base-url" class="settings-input" placeholder="e.g. http://localhost:11434/v1">
+        </div>
+
+        <label>API Key</label>
+        <input type="text" id="api-key" class="settings-input" placeholder="Paste your API key here">
+
+        <div id="model-name-group" class="settings-group-hidden">
+            <label>Model Name</label>
+            <input type="text" id="model-name" class="settings-input" placeholder="e.g. openai/gpt-4o-mini">
+        </div>
+
+        <div class="settings-row">
+            <button id="test-connection" class="test-connection-btn">Test Connection</button>
+            <span id="test-status" class="test-status"></span>
+        </div>
+
+        <button id="save-settings">Save & Close</button>
+    </div>
+
+    <div id="chat-container">
+        <div id="step-card" class="step-card">
+            <div class="step-title">Current Step</div>
+            <div id="step-text" class="step-text">Waiting for a step...</div>
+            <div class="step-meta">
+                <span id="step-action" class="chip">Action: -</span>
+                <span id="step-status" class="chip">Status: idle</span>
+            </div>
+            <div id="top-targets" class="top-targets hidden">
+                <div class="top-targets-title">Top 3 Targets</div>
+                <ol class="top-targets-list"></ol>
+            </div>
+        </div>
+        <div class="msg system">Welcome to GhostGuide API Edition.<br>Set your API key in Settings (⚙️) to start.</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="goal-input" placeholder="What do you want to do?">
+        <div class="input-actions">
+            <button id="done-btn" class="done-btn" title="Confirm Step" disabled>Done</button>
+            <button id="send-btn">Start</button>
+        </div>
+    </div>
+
+    <script src="panel.js"></script>
+</body>
+
+</html>
