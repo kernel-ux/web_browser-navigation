@@ -7,6 +7,7 @@ GhostGuide is a Chrome extension that turns a high‑level goal into step‑by�
 ![GhostGuide Demo](assets/demo.gif)
 
 Demo video (full quality): `assets/demo.mp4`
+Full video link: `https://github.com/kernel-ux/web_browser-navigation/raw/main/assets/demo.mp4`
 
 ## Why It’s Different
 
