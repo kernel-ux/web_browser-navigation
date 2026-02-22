@@ -1,3 +1,17 @@
+// --- Utility: Refine Search Term ---
+function refineSearchTerm(goalText) {
+    if (!goalText) return '';
+    let text = goalText.toLowerCase();
+    text = text.replace(/https?:\/\/[\S]+/gi, '');
+    text = text.replace(/\b(guide me to|help me|i want to|i need to|how to|please|find|get|create|open)\b/gi, '');
+    text = text.replace(/\s+/g, ' ').trim();
+    const match = text.match(/(?:search|google)\s+for\s+(.+)/i);
+    if (match && match[1]) text = match[1].trim();
+    if (text.startsWith('search ')) text = text.slice(7).trim();
+    if (text.startsWith('google ')) text = text.slice(7).trim();
+    const words = text.split(' ').filter(Boolean).slice(0, 8);
+    return words.join(' ').trim();
+}
 // --- STATE ---
 let GOAL = '';
 let HISTORY = [];
@@ -17,6 +31,9 @@ let _addMsg = (sender, text) => console.log(`[${sender}] ${text}`);
 let _setStepCard = (text, status, action) => console.log(`[StepCard] ${text}`);
 let _requestNextStep = async () => console.warn('[Bridge] requestNextStep called before init');
 let _updateConfirmButtons = () => { };
+let _appendHistoryInBackground = async () => {
+    console.warn('[Bridge] appendHistoryInBackground called before init');
+};
 
 
 
@@ -1040,7 +1057,8 @@ Example JSON:
             if (!tabInfo.url || isRestrictedUrl(tabInfo.url)) {
                 if (!tabInfo.url || isNewTabUrl(tabInfo.url)) {
                     setNewtabBanner(true, { force: true });
-                    setStepCard('Open Google Search to continue.', 'waiting', 'navigate');
+                    setStepCard('Opening Google Search to continue...', 'loading', 'navigate');
+                    await openGoogleSearch();
                 } else {
                     setStepCard('Open a normal web page to continue.', 'waiting', 'navigate');
                 }
@@ -1064,6 +1082,37 @@ Example JSON:
             }
 
             setNewtabBanner(false);
+
+            // General search guidance (not just Google) when goal explicitly includes search
+            if (shouldGuideSearchAnywhere(stepGoal)) {
+                const currentHost = safeHostname(tabInfo.url || '');
+                const primaryDomain = detectPrimaryDomain(stepGoal || GOAL);
+                const allowSearchGuide = !primaryDomain || currentHost.includes(primaryDomain.split('.')[0]);
+                const last = HISTORY[HISTORY.length - 1];
+                const alreadyPendingSearch = Boolean(last && last.action === 'search' && last.status === 'pending');
+                if (allowSearchGuide && !alreadyPendingSearch) {
+                    const searchTerm = refineSearchTerm(stepGoal);
+                    try {
+                        const searchResp = await sendToContent(tabInfo.id, { action: 'find_search_input', searchTerm });
+                        if (searchResp && searchResp.found) {
+                            if (searchTerm) {
+                                setStepCard(`Search for: "${searchTerm}" → Press Enter, then click Done`, 'waiting', 'search');
+                            } else {
+                                setStepCard('Type your query → Press Enter, then click Done', 'waiting', 'search');
+                            }
+                            await appendHistoryInBackground({ action: 'search', thought: searchTerm || 'search query', searchTerm, url: tabInfo.url, status: 'pending' });
+                            SEARCH_GUIDED = true;
+                            WAITING_CONFIRM = true;
+                            if (doneBtn) doneBtn.disabled = false;
+                            updateConfirmButtons();
+                            STEP_IN_FLIGHT = false;
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn('Search highlight failed:', e.message);
+                    }
+                }
+            }
 
             if (/google\./i.test(tabInfo.url || '')) {
                 const onResults = isGoogleResultsUrl(tabInfo.url || '');
@@ -1436,6 +1485,8 @@ Return JSON only: {"action":"click"|"type"|"navigate"|"finish","index":N,"text":
                     finishNotes.value = '';
                     finishNotes.classList.add('hidden');
                 }
+                // Always remove and re-add finish prompt to ensure visibility
+                removeFinishPrompt();
                 ensureFinishPrompt();
                 await appendHistoryInBackground({ action: 'finish', thought: cmd.thought || 'Confirm completion', status: 'pending' });
                 WAITING_CONFIRM = true;
@@ -1851,6 +1902,7 @@ Return JSON only: {"action":"click"|"type"|"navigate"|"finish","index":N,"text":
     _setStepCard = setStepCard;
     _requestNextStep = requestNextStep;
     _updateConfirmButtons = updateConfirmButtons;
+    _appendHistoryInBackground = appendHistoryInBackground;
 
 
     function showLoadingMessage(text) {
@@ -2266,13 +2318,16 @@ Is the goal fully achieved? Reply with ONLY valid JSON:
             const parsed = JSON.parse(match[0]);
 
             if (parsed.finished === true) {
-                // 🎉 Goal complete!
-                _addMsg('System', '🎉 Goal complete! All done.');
-                _setStepCard('🎉 Goal complete!', 'success', 'finish');
+                // Ask user to confirm completion (Finished / Not finished)
+                _addMsg('System', 'AI says the goal is complete. Choose Finished or Not finished, then Continue.');
+                const last = HISTORY[HISTORY.length - 1];
+                if (!(last && last.action === 'finish' && last.status === 'pending')) {
+                    await _appendHistoryInBackground({ action: 'finish', thought: 'Confirm completion', status: 'pending' });
+                }
                 RUNNING = false;
-                GOAL = '';
-                const btn = document.getElementById('start-btn');
-                if (btn) btn.innerText = 'Start';
+                WAITING_CONFIRM = true;
+                FINISH_CHOICE = '';
+                _setStepCard('Confirm goal is complete → Continue', 'waiting', 'finish');
                 _updateConfirmButtons();
                 await sendToBackground('gg_clear_highlight');
                 return;
@@ -2300,8 +2355,14 @@ Is the goal fully achieved? Reply with ONLY valid JSON:
 
     // Fallback: show manual finish prompt
     _addMsg('System', '✅ Steps complete. Please confirm if the goal is done.');
-    _setStepCard('All steps done. Is the goal complete?', 'success', 'finish');
+    const last = HISTORY[HISTORY.length - 1];
+    if (!(last && last.action === 'finish' && last.status === 'pending')) {
+        await _appendHistoryInBackground({ action: 'finish', thought: 'Confirm completion', status: 'pending' });
+    }
+    _setStepCard('All steps done. Is the goal complete?', 'waiting', 'finish');
+    RUNNING = false;
     WAITING_CONFIRM = true;
+    FINISH_CHOICE = '';
     _updateConfirmButtons();
 }
 
@@ -2383,6 +2444,9 @@ function getPreferredTypes(goalText) {
     }
     if (text.includes('upload')) {
         types.push('input_file');
+    }
+    if (text.includes('search') || text.includes('find') || text.includes('lookup')) {
+        types.push('input_search', 'input_text', 'textbox');
     }
 
     return Array.from(new Set(types));
@@ -2503,112 +2567,75 @@ function filterTargetsByGoal(targets, goal, pageUrl) {
     const primaryDomain = detectPrimaryDomain(goal);
 
     // GENERALIZED APPROACH: Re-rank based on semantic signals, don't filter aggressively
-    const sortedTargets = targets
+    // STRICT CLICKABLE FILTER: Only allow buttons, links, and inputs with AX match or clear label
+    const clickableTypes = ['button', 'link', 'input_text', 'input_password', 'input_submit', 'select', 'textarea'];
+    const filtered = targets.filter(t => {
+        // Must be a clickable/interactable type
+        if (!clickableTypes.includes(t.type)) return false;
+        // Must have a label or AX match
+        if (!(t.label && t.label.length > 0) && !t.axMatch) return false;
+        return true;
+    });
+
+    // Rerank filtered targets as before
+    const sortedTargets = filtered
         .map(target => {
             let score = (target._bm25 || 0) + scoreTargetMatch(target, goalTokens);
-
-            // SEMANTIC BOOSTS (don't filter - just rerank)
-            if (target.axMatch) score += 2;  // AX tree found it - it's interactive
-            if (onResults && target.type === 'link') score += 3;  // Search results favor links
-
-            // Boost elements with aria-label (more semantic than text nodes)
+            if (target.axMatch) score += 2;
+            if (onResults && target.type === 'link') score += 3;
             if (target.ariaLabel) score += 1;
-
-            // POSITION BOOST: Google Trust Factor
-            // Google puts the best results at the top. Trust their ranking.
-            // We give a decay boost: Top result gets +10, 10th result gets +1.
-            // Formula: Max(0, 10 - index) or similar.
             if (onResults) {
-                // Simple decay: +5 points for 1st item, +4 for 2nd... down to database order
-                // We use index (which is roughly DOM order). Extend the range!
-                // Decay from +20 points (index 0) down to +0 points (index 100)
-                // NEW: Stronger position boost for top results (asked by user)
-                // Max 35 points for result #0, decaying to 0 at #100
                 const positionBonus = Math.max(0, 35 - target.index * 0.35);
                 score += positionBonus;
             }
-
-            /* REMOVED SHORT LINK PENALTY AS REQUESTED
-            if (onResults && target.type === 'link') {
-                const textLength = ((target.label || '') + (target.text || '')).length;
-                if (textLength < 35) {
-                    score -= 10;
-                } else {
-                    score += 5;
-                }
-            }
-            */
-
-            // On search/results, boost links that go to the PRIMARY DOMAIN
             if (onResults && target.type === 'link' && primaryDomain) {
                 const linkDomain = extractDomainFromUrl(target.url || target.href || '');
                 if (linkDomain && linkDomain.includes(primaryDomain.split('.')[0])) {
-                    score += 10;  // HUGE boost for official domain links
+                    score += 10;
                 }
             }
-
-            // On search results, deprioritize "how-to" / "guide" / "tutorial" patterns (they're explanatory, not direct)
             if (onResults && target.type === 'link') {
                 const label = (target.label || '').toLowerCase();
                 if (/^(how to|tutorial|guide|here\'s|step by|beginners|explained|what is|custom|reddit)/i.test(label)) {
-                    score -= 2;  // Slight penalty for explanatory content
+                    score -= 2;
                 }
             }
-
-            // Boost interactive elements (buttons, inputs) for form/setup goals
             if (/setup|configure|create|authenticate|fill|form|api|key|token|login|sign up/.test(lower)) {
                 if (/button|input|select|textarea|form/.test(target.type || '')) score += 1.5;
             }
-
             return { ...target, _score: score };
         })
         .sort((a, b) => b._score - a._score);
 
-    // PRIORITY 1: On search results, HEAVILY prioritize OFFICIAL DOMAIN LINKS FIRST
+    // On search results, prioritize official domain links
     if (onResults) {
-        // Extract official domain links
         const officialLinks = sortedTargets.filter(t => {
             if (t.type !== 'link' || !primaryDomain) return false;
             const linkDomain = extractDomainFromUrl(t.url || t.href || '');
             return linkDomain && linkDomain.includes(primaryDomain.split('.')[0]);
         });
-
-        // If we found official domain links, ONLY show those - filter out everything else
         if (officialLinks.length > 0) {
-            // Sort official links by content length (longer = better description)
             officialLinks.sort((a, b) => {
                 const lenA = ((a.label || '') + (a.text || '')).length;
                 const lenB = ((b.label || '') + (b.text || '')).length;
-                return lenB - lenA;  // Longer first
+                return lenB - lenA;
             });
-            console.log(`📍 Found ${officialLinks.length} official domain links, filtering out all other suggestions`);
-            // Return ONLY official links - this prevents AI from seeing search suggestions
             return officialLinks;
         }
-
-        // No official links found, fall back to sorting regular links by content quality
         const links = sortedTargets.filter(t => t.type === 'link');
         const others = sortedTargets.filter(t => t.type !== 'link');
-        // De-prioritize short/guide-like links within this list
         links.sort((a, b) => {
             let scoreA = 0, scoreB = 0;
             const textA = (a.label || '').toLowerCase();
             const textB = (b.label || '').toLowerCase();
-
-            // Penalize guides/tutorials more heavily
             if (/^(how to|tutorial|guide|step by|explained)/i.test(textA)) scoreA -= 20;
             if (/^(how to|tutorial|guide|step by|explained)/i.test(textB)) scoreB -= 20;
-
-            // Boost longer, more descriptive titles
             scoreA += ((a.label || '').length / 10);
             scoreB += ((b.label || '').length / 10);
-
             return scoreB - scoreA;
         });
         return links.concat(others);
     }
-
-    // Return full ranked list, don't filter down
     return sortedTargets;
 }
 
@@ -2762,20 +2789,34 @@ function normalizeUrl(url) {
 
 function normalizeGoal(text) {
     if (!text) return '';
-    const cleaned = text.replace(/\s+/g, ' ').trim();
-    if (!/step\s*\d+/i.test(cleaned)) return cleaned;
+    const cleaned = text.replace(/\r/g, '').trim();
 
-    const stepMatch = cleaned.split(/step\s*\d+\s*[:.-]?/i).filter(Boolean);
-    if (stepMatch.length) {
-        const first = stepMatch[0].trim();
-        const urlMatch = first.match(/https?:\/\/[^\s]+/i);
-        if (urlMatch) return first;
-        const sentenceEnd = first.search(/[.!?](\s|$)/);
-        if (sentenceEnd > 0) return first.slice(0, sentenceEnd + 1);
-        return first.slice(0, 140);
+    // If prompt is a numbered/bulleted list, take the first actionable line.
+    const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+    const numbered = lines.find(l => /^(\d+[\.\)]|[0-9]️⃣|[-*•])\s+/u.test(l));
+    if (numbered) {
+        const firstLine = numbered.replace(/^(\d+[\.\)]|[0-9]️⃣|[-*•])\s+/u, '').trim();
+        if (firstLine) return firstLine.slice(0, 160);
     }
 
-    return cleaned.slice(0, 140);
+    // If prompt contains "Step 1:" style, keep only the first step.
+    if (/step\s*\d+/i.test(cleaned)) {
+        const stepMatch = cleaned.split(/step\s*\d+\s*[:.-]?/i).filter(Boolean);
+        if (stepMatch.length) {
+            const first = stepMatch[0].trim();
+            const urlMatch = first.match(/https?:\/\/[^\s]+/i);
+            if (urlMatch) return first;
+            const sentenceEnd = first.search(/[.!?](\s|$)/);
+            if (sentenceEnd > 0) return first.slice(0, sentenceEnd + 1);
+            return first.slice(0, 160);
+        }
+    }
+
+    // Otherwise, keep the first sentence to avoid long, confusing prompts.
+    const sentenceEnd = cleaned.search(/[.!?](\s|$)/);
+    if (sentenceEnd > 0) return cleaned.slice(0, sentenceEnd + 1).trim();
+
+    return cleaned.slice(0, 160);
 }
 
 function isLikelyGoalComplete(goalText, pageUrl, pageTitle, historyCount) {
@@ -2927,6 +2968,11 @@ function rankCandidates(context, query) {
             if (label) score += 1;
             if (group.type === 'button') score += 1;
             if (ex.axMatch) score += 2;
+            // If goal is search-like, prefer inputs over buttons
+            if (goalKeywords.includes('search') || goalKeywords.includes('query')) {
+                if ((group.type || '').includes('input') || (group.type || '').includes('textarea')) score += 3;
+                if ((group.type || '').includes('button')) score -= 1;
+            }
 
             candidates.push({
                 ...ex,
@@ -2952,6 +2998,7 @@ function extractGoalKeywords(query) {
     if (/delete|remove/.test(lower)) keywords.push('delete', 'remove', 'trash');
     if (/edit|modify|change/.test(lower)) keywords.push('edit', 'modify', 'update');
     if (/documentation|docs/.test(lower)) keywords.push('docs', 'documentation', 'guide');
+    if (/search|find|lookup|query/.test(lower)) keywords.push('search', 'find', 'lookup', 'query', 'input', 'textbox');
 
     return keywords;
 }
@@ -3021,28 +3068,7 @@ function extractTargetText(text) {
     return '';
 }
 
-function extractSearchTerm(goalText) {
-    if (!goalText) return '';
-    const cleaned = goalText.replace(/https?:\/\/[^\s]+/gi, '').trim();
-    const match = cleaned.match(/(?:search|google)\s+for\s+(.+)/i);
-    if (match && match[1]) return match[1].trim();
-    const loose = cleaned.replace(/^(search|google)\b/i, '').trim();
-    return loose;
-}
 
-function refineSearchTerm(goalText) {
-    if (!goalText) return '';
-    let text = goalText.toLowerCase();
-    text = text.replace(/https?:\/\/[^\s]+/gi, '');
-    text = text.replace(/\b(guide me to|help me|i want to|i need to|how to|please|find|get|create|open)\b/gi, '');
-    text = text.replace(/\s+/g, ' ').trim();
-    const match = text.match(/(?:search|google)\s+for\s+(.+)/i);
-    if (match && match[1]) text = match[1].trim();
-    if (text.startsWith('search ')) text = text.slice(7).trim();
-    if (text.startsWith('google ')) text = text.slice(7).trim();
-    const words = text.split(' ').filter(Boolean).slice(0, 8);
-    return words.join(' ').trim();
-}
 
 async function waitForUrlChange(tabId, previousUrl, timeoutMs) {
     const start = Date.now();
@@ -3106,4 +3132,9 @@ function shouldUseSearchShortcut(goalText) {
     // ONLY use search shortcut if explicitly mentioned
     if (/(^search |^google |search for|google for)/i.test(text)) return true;
     return false;
+}
+
+function shouldGuideSearchAnywhere(goalText) {
+    if (!goalText) return false;
+    return /search|find|lookup|query/i.test(goalText);
 }
