@@ -2,7 +2,7 @@
 
 ![GhostGuide Hero](assets/hero.png)
 
-GhostGuide is a Chrome extension that turns a high‑level goal into step‑by‑step guidance on any website. It scans the live DOM (no screenshots), ranks likely targets, asks an AI for the next action, then highlights the exact element so you can complete the step confidently.
+GhostGuide is a Chrome extension that turns a high‑level goal into step‑by‑step guidance on any website. It scans the live DOM (no screenshots), ranks likely targets, asks an AI for the next action, and highlights exactly where to click or type.
 
 ![GhostGuide Demo](assets/demo.gif)
 
@@ -68,7 +68,18 @@ If you want to rename or rebrand:
 
 ## Contributing
 
-See `CONTRIBUTING.md`.
+Contributions are welcome. You can contribute by reporting bugs, suggesting improvements, improving documentation, or submitting code changes.
+
+1. Fork the repository and create a new branch.
+2. Make your changes and test them in Chrome.
+3. Commit your changes with a clear message.
+4. Open a pull request describing what changed and how you tested it.
+
+Please keep pull requests focused and read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting.
+
+## Contributors
+
+- **Nirmal** — Contributed to building major features, including the core browser guidance experience, AI-assisted navigation, visual element highlighting, multi-step planning, and extension functionality.
 
 ## Providers
 
